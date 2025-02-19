@@ -1,0 +1,71 @@
+# 本地SMTP服务配置
+local:
+  # 普通SMTP端口，默认25
+  port: 25
+  # TLS端口，默认587
+  tls_port: 587
+  # SSL端口，默认465
+  ssl_port: 465
+  # 如不需要启用TLS/SSL，则注释配置 cert_file 和 key_file 即可
+  # TLS证书文件路径
+  #cert_file: "cert/server.crt"
+  # TLS密钥文件路径
+  #key_file: "cert/server.key"
+  # 是否启用SMTP认证
+  enable_auth: true
+  # 认证用户名（仅在enable_auth为true时有效）
+  username: "your-username"
+  # 认证密码（仅在enable_auth为true时有效）
+  password: "your-password"
+  # IP白名单，支持IP或CIDR格式
+  allowed_ips:
+    - "127.0.0.1"
+    - "192.168.1.0/24"
+
+# 外部SMTP服务器配置
+remote:
+  # SMTP服务器地址
+  host: "smtp.example.com"
+  # SMTP服务器端口
+  port: 465
+  # 是否使用TLS，不能与use_ssl同时使用
+  use_tls: false
+  # 是否使用SSL，不能与use_tls同时使用
+  use_ssl: true
+  # 认证用户名
+  username: "your-username"
+  # 认证密码
+  password: "your-password"
+  # 发件人邮箱
+  from: "sender@example.com"
+
+# 钉钉告警配置
+dingtalk:
+  # Webhook地址，不需要发送钉钉告警直接注释
+  #webhook: "https://oapi.dingtalk.com/robot/send?access_token=your-token"
+  # 安全密钥
+  #secret: "your-secret"
+
+# 日志配置
+log:
+  # 日志级别：debug, info, warn, error
+  level: "debug"
+  # 日志输出模式：file, stdout
+  mode: "stdout"
+  # 日志文件路径（仅在file模式和dir未配置情况下有效，适用于不进行日志轮转场景）
+  file: "logs/smtpforwarder.log"
+  # 日志目录，用于存放按天分割的日志文件（仅在file模式下有效，适用于进行日志轮转场景）
+  dir: "logs"
+  # 日志保留天数，默认7天（仅在file模式下有效）
+  retention_days: 7
+
+# 邮件队列配置
+queue:
+  # 队列存储目录
+  dir: "data/queue"
+  # 重试间隔时间（秒）
+  retry_interval: 60
+  # 最大重试次数
+  max_retries: 3
+  # 失败邮件存储目录
+  failed_queue_dir: "data/failed_queue"
