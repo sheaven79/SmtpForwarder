@@ -18,8 +18,8 @@ SMTP 邮件转发器是一个轻量级的邮件转发服务，支持将本地SMT
 ## 快速开始
 1. 克隆项目
    ```bash
-   git clone https://github.com/sheaven79/smtpforwarder.git
-   cd smtpforwarder
+   git clone https://github.com/sheaven79/SmtpForwarder.git
+   cd SmtpForwarder
    ```
 
 2. 复制示例配置文件，并根据实际需求修改
