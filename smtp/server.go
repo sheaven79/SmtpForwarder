@@ -27,14 +27,22 @@ type Server struct {
 
 // Session SMTP会话
 type Session struct {
-	server   *Server
-	from     string
-	to       []string
-	clientIP string
+	server     *Server
+	from       string
+	to         []string
+	clientIP   string
+	serverPort int // 新增服务器端口字段
 }
 
 // NewSession 创建新的SMTP会话
 func (s *Server) NewSession(state *gosmtp.Conn) (gosmtp.Session, error) {
+	serverPort := 0
+	if state.Conn().LocalAddr().Network() == "tcp" {
+		_, portStr, err := net.SplitHostPort(state.Conn().LocalAddr().String())
+		if err == nil {
+			fmt.Sscan(portStr, &serverPort)
+		}
+	}
 	// 获取客户端地址并分离IP和端口
 	remoteAddr := state.Conn().RemoteAddr().String()
 	clientIP, _, err := net.SplitHostPort(remoteAddr)
@@ -45,7 +53,7 @@ func (s *Server) NewSession(state *gosmtp.Conn) (gosmtp.Session, error) {
 
 	// 记录连接日志并验证IP白名单
 	isAllowed := s.cfg.IsIPAllowed(clientIP)
-	logger.Info("收到SMTP连接请求，客户端IP: %s，IP白名单验证: %v", clientIP, isAllowed)
+	logger.Info("服务器端口: %d 收到SMTP连接请求，客户端IP: %s，IP白名单验证: %v", serverPort, clientIP, isAllowed)
 
 	// 如果IP不在白名单中，直接返回错误
 	if !isAllowed {
@@ -53,7 +61,7 @@ func (s *Server) NewSession(state *gosmtp.Conn) (gosmtp.Session, error) {
 		return nil, fmt.Errorf("IP不在白名单中")
 	}
 
-	return &Session{server: s, clientIP: clientIP}, nil
+	return &Session{server: s, clientIP: clientIP, serverPort: serverPort}, nil
 }
 
 // AuthMechanisms 返回支持的认证机制列表。
@@ -121,7 +129,7 @@ func (s *Server) Start() error {
 		return fmt.Errorf("启动普通SMTP服务失败: %v", err)
 	}
 
-	// 创建TLS服务器
+	// 创建 TLS 和 SSL 服务器（如果已配置）
 	if s.cfg.Local.CertFile != "" && s.cfg.Local.KeyFile != "" {
 		tlsConfig, err := s.loadTLSConfig()
 		if err != nil {
@@ -162,12 +170,18 @@ func (s *Server) startServer(port int, tlsConfig *tls.Config) error {
 
 	// 启动服务器
 	go func() {
-		if tlsConfig != nil {
-			logger.Info("启动TLS/SSL SMTP服务，监听端口: %d", port)
-			if err := server.ListenAndServe(); err != nil {
-				logger.Error(s.cfg, "TLS/SSL SMTP服务异常: %v", err)
+		switch port {
+		case s.cfg.Local.SSLPort:
+			logger.Info("启动 SSL SMTP 服务，监听端口: %d", port)
+			if err := server.ListenAndServeTLS(); err != nil {
+				logger.Error(s.cfg, "SSL SMTP 服务异常: %v", err)
 			}
-		} else {
+		case s.cfg.Local.TLSPort:
+			logger.Info("启动 TLS SMTP 服务，监听端口: %d", port)
+			if err := server.ListenAndServe(); err != nil {
+				logger.Error(s.cfg, "TLS SMTP 服务异常: %v", err)
+			}
+		default:
 			logger.Info("启动普通SMTP服务，监听端口: %d", port)
 			if err := server.ListenAndServe(); err != nil {
 				logger.Error(s.cfg, "普通SMTP服务异常: %v", err)
@@ -302,7 +316,7 @@ func (s *Server) forwardMail(mail *queue.Mail, data []byte) error {
 				return err
 			}
 		} else if s.cfg.Remote.UseTLS {
-			logger.Debug("启用TLS加密")
+			logger.Debug("使用TLS模式连接SMTP服务器: %s:%d", s.cfg.Remote.Host, s.cfg.Remote.Port)
 			client, err = gosmtp.DialStartTLS(fmt.Sprintf("%s:%d", s.cfg.Remote.Host, s.cfg.Remote.Port), tlsConfig)
 			if err != nil {
 				logger.Error(s.cfg, "TLS连接外部SMTP服务器失败: %v", err)
