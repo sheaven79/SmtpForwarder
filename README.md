@@ -1,4 +1,5 @@
 # SmtpForwarder-内网邮件转发器
+![SmtpForwarder](https://github.com/user-attachments/assets/189059ab-a880-43a9-9d0b-85a7bed9af70)
 
 ## 项目简介
 SMTP 邮件转发器是一个轻量级的邮件转发服务，支持将本地SMTP服务接收到的邮件转发到外部SMTP服务器。适用于部署在内网环境中，接收并通过外部SMTP服务器转发各类监控和设备的告警邮件的场景。
